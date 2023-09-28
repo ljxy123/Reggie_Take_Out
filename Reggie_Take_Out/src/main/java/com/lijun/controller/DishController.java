@@ -7,6 +7,7 @@ import com.lijun.dto.DishDto;
 import com.lijun.entity.Category;
 import com.lijun.entity.Dish;
 import com.lijun.entity.DishFlavor;
+import com.lijun.entity.Setmeal;
 import com.lijun.service.DishFlavorService;
 import com.lijun.service.DishService;
 import com.lijun.service.imp.CategoryService;
@@ -22,7 +23,7 @@ import java.util.stream.Collectors;
 @RestController
 @Slf4j
 @RequestMapping("/dish")
-public class DishController{
+public class DishController {
 
     @Autowired
     private DishService dishService;
@@ -34,25 +35,25 @@ public class DishController{
     private CategoryService categoryService;
 
     /*
-    * 分页查询菜品信息
-    * */
+     * 分页查询菜品信息
+     * */
     @GetMapping("page")
-    public Result<Page> selectByPage(Integer page,Integer pageSize,String name){
-        log.info("菜品分页查询,起始页：{}，每页展示数量：{}，查询菜品名称；{}",page,pageSize,name);
+    public Result<Page> selectByPage(Integer page, Integer pageSize, String name) {
+        log.info("菜品分页查询,起始页：{}，每页展示数量：{}，查询菜品名称；{}", page, pageSize, name);
 
         //分页查询菜品
-        Page<Dish> dishPage = new Page<>(page,pageSize);
+        Page<Dish> dishPage = new Page<>(page, pageSize);
         LambdaQueryWrapper<Dish> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(name!=null&&name.length()!=0,Dish::getName,name);
+        wrapper.like(name != null && name.length() != 0, Dish::getName, name);
         wrapper.orderByDesc(Dish::getUpdateTime);
-        Page<Dish> resPage = dishService.page(dishPage,wrapper);
+        Page<Dish> resPage = dishService.page(dishPage, wrapper);
 
         /*
-        * 将查询结果中的分类id都转换成分类名称
-        * */
+         * 将查询结果中的分类id都转换成分类名称
+         * */
         Page<DishDto> dishDtoPage = new Page<>();
         //将dishPage中的属性拷贝到新的分页当中
-        BeanUtils.copyProperties(resPage,dishDtoPage,"records");
+        BeanUtils.copyProperties(resPage, dishDtoPage, "records");
         List<DishDto> list = resPage.getRecords().stream().map((item) -> {
             DishDto dishDto = new DishDto();
             BeanUtils.copyProperties(item, dishDto);
@@ -60,7 +61,7 @@ public class DishController{
             //查询菜品对应的分类名称
             Category category = categoryService.getById(item.getCategoryId());
 
-            if (category!=null){
+            if (category != null) {
                 dishDto.setCategoryName(category.getName());
             }
 
@@ -73,11 +74,11 @@ public class DishController{
     }
 
     /*
-    * 新增菜品
-    * */
+     * 新增菜品
+     * */
     @PostMapping
-    public Result<String> addDish(@RequestBody DishDto dishDto){
-        log.info("新增菜品:{}",dishDto);
+    public Result<String> addDish(@RequestBody DishDto dishDto) {
+        log.info("新增菜品:{}", dishDto);
 
         dishService.addDish(dishDto);
 
@@ -85,10 +86,10 @@ public class DishController{
     }
 
     /*
-    * 根据id查询菜品
-    * */
+     * 根据id查询菜品
+     * */
     @GetMapping("/{id}")
-    public Result<DishDto> selectById(@PathVariable Long id){
+    public Result<DishDto> selectById(@PathVariable Long id) {
 
         DishDto dishDto = dishService.selectByIdWithCategory(id);
 
@@ -96,11 +97,11 @@ public class DishController{
     }
 
     /*
-    * 更新菜品
-    * */
+     * 更新菜品
+     * */
 
     @PutMapping
-    public  Result<String> updateDish(@RequestBody DishDto dishDto){
+    public Result<String> updateDish(@RequestBody DishDto dishDto) {
 
         dishService.updateWithFlavor(dishDto);
 
@@ -111,16 +112,16 @@ public class DishController{
      * 根据菜品的分类id查询对应的id
      * */
     @GetMapping("/list")
-    public Result<List<DishDto>> selectByCategoryId(DishDto dishDto){
-        log.info("查询的分类id:{}",dishDto.getCategoryId());
+    public Result<List<DishDto>> selectByCategoryId(DishDto dishDto) {
+        log.info("查询的分类id:{}", dishDto.getCategoryId());
 
         //获取分类id
         Long id = dishDto.getCategoryId();
 
         //根据分类id进行菜品的查询
         LambdaQueryWrapper<Dish> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(id!=null,Dish::getCategoryId,id);
-        wrapper.eq(Dish::getStatus,1);
+        wrapper.eq(id != null, Dish::getCategoryId, id);
+        wrapper.eq(Dish::getStatus, 1);
         wrapper.orderByAsc(Dish::getSort).orderByAsc(Dish::getUpdateTime);
         List<Dish> list = dishService.list(wrapper);
 
@@ -141,5 +142,24 @@ public class DishController{
         return Result.success(dishDtoList);
     }
 
+    /*
+    * 菜品停售
+    * */
+    @PostMapping("/status/{type}")
+    public Result<String> setStatus(@PathVariable Integer type,@RequestParam List<Long> ids) {
+        log.info("要停售的菜品id为:{}",ids);
+        //获得所有对应的套餐
+        List<Dish> dishes = dishService.listByIds(ids);
+
+        //修改销售状态
+        dishes = dishes.stream().map(item -> {
+            item.setStatus(item.getStatus() == 1 ? 0 : 1);
+            return item;
+        }).collect(Collectors.toList());
+
+        dishService.updateBatchById(dishes);
+
+        return Result.success("停售成功");
+    }
 
 }

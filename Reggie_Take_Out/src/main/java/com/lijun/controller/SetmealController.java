@@ -1,6 +1,7 @@
 package com.lijun.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lijun.common.Result;
 import com.lijun.dto.DishDto;
@@ -9,6 +10,7 @@ import com.lijun.entity.Category;
 import com.lijun.entity.Dish;
 import com.lijun.entity.Setmeal;
 import com.lijun.service.CategoryService;
+import com.lijun.service.DishService;
 import com.lijun.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -91,19 +93,16 @@ public class SetmealController {
     @PostMapping("/status/{type}")
     public Result<String> setStatus(@PathVariable Integer type,@RequestParam List<Long> ids) {
         log.info("要停售的套餐id为:{}",ids);
-
         //获得所有对应的套餐
-        LambdaQueryWrapper<Setmeal> wrapper = new LambdaQueryWrapper<>();
         List<Setmeal> setmeals = setmealService.listByIds(ids);
 
         //修改销售状态
-        setmeals=setmeals.stream().map(item->{
-            item.setStatus(item.getStatus()==1?0:1);
+        setmeals = setmeals.stream().map(item -> {
+            item.setStatus(item.getStatus() == 1 ? 0 : 1);
             return item;
         }).collect(Collectors.toList());
 
         setmealService.updateBatchById(setmeals);
-
 
         return Result.success("停售成功");
     }
