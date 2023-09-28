@@ -8,7 +8,7 @@ public class ReggieTakeOutApplication {
 
     public static void main(String[] args) {
         /*
-        * 练习吧
+        * 练习吧吧
         * */
         SpringApplication.run(ReggieTakeOutApplication.class, args);
     }
